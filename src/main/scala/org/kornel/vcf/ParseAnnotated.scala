@@ -11,16 +11,19 @@ object ParseAnnotated extends App {
   val file = scala.io.Source.fromFile(inputPath)
 
   val lines = skipHeader(file.getLines()).flatMap(line => VC(line.split("\t")))
-    //.filter(_.chromosome == 10)
+    .filter(_.chromosome == 10)
     .flatMap(v => v.info().eff.map(e => v -> e))
-    //.filter(_._2.name == "frameshift_variant")
-    .map(v => (v._1.hds1, v._1.hds2) -> 1).toSeq.groupBy(_._1).mapValues(_.foldLeft(0)((a,b) => a + b._2))
+    .filter(_._2.name == "frameshift_variant")
+    .map {
+    case (vc, eff) => vc.position -> (vc.hds1.value - vc.hds2.value)
+  }
+  //.map(v => (v._1.hds1, v._1.hds2) -> 1).toSeq.groupBy(_._1).mapValues(_.foldLeft(0)((a,b) => a + b._2))
 
   lines.foreach(println)
 
 }
 
-case class EFF(name: String, content: String)
+case class EFF(name: String, content: String, geneName: String)
 
 case class Info(eff: Seq[EFF])
 
@@ -49,15 +52,25 @@ object Info {
   }
 }
 
-sealed trait IsChange
+sealed trait IsChange {
+  val value: Int
+}
 
-case object ChangeHDS1 extends IsChange
+case object ChangeA extends IsChange {
+  val value = 1
+}
 
-case object ChangeHDS2 extends IsChange
+case object ChangeB extends IsChange {
+  val value = 1
+}
 
-case object ChangeBoth extends IsChange
+case object ChangeBoth extends IsChange {
+  val value = 1
+}
 
-case object NoChange extends IsChange
+case object NoChange extends IsChange {
+  val value = 2
+}
 
 case class VC(chromosome: Int, position: Int, info: () => Info, hds1: IsChange, hds2: IsChange)
 
@@ -71,8 +84,8 @@ object VC {
 
   def extractHds(rawHds: String) = rawHds.substring(0, 3) match {
     case "0/0" => NoChange
-    case "1/0" => ChangeHDS1
-    case "0/1" => ChangeHDS2
+    case "1/0" => ChangeA
+    case "0/1" => ChangeB
     case "1/1" => ChangeBoth
     case x => throw new IllegalStateException(s"Unexpected hds $x")
   }
