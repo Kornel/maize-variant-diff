@@ -11,10 +11,12 @@ object ParseAnnotated extends App {
   val file = scala.io.Source.fromFile(inputPath)
 
   val lines = skipHeader(file.getLines()).flatMap(line => VC(line.split("\t")))
-    .filter(_.chromosome == 456)
-    .flatMap(_.format().eff.map(_.name))
+    .filter(_.chromosome == 10)
+    .flatMap(v => v.format().eff.map(e => v.position -> e))
+    .filter(_._2.name == "frameshift_variant")
+    .map(_._1)
+    .foreach(println)
 
-  lines.toSeq.distinct.foreach(println)
 }
 
 case class EFF(name: String, content: String)
@@ -56,15 +58,16 @@ object VC {
 
   def extractFormat(fields: Array[String]) = fields(7)
 
-  //  def hds1(fields: Array[String]) = fields(8)
-  //
-  //  def hds2(fields: Array[String]) = fields(9)
+//  def extractHds1(fields: Array[String]) = fields(8)
+//
+//  def extractHds2(fields: Array[String]) = fields(9)
 
   def apply(tokens: Array[String]): Option[VC] = {
     Try(extractChromosome(tokens).toInt).toOption.map {
       chromosome =>
         val position = extractPosition(tokens).toInt
-        val format = () => Format(extractFormat(tokens))
+        lazy val _format = Format(extractFormat(tokens))
+        val format = () => _format
         VC(chromosome, position, format)
     }
   }
@@ -72,7 +75,7 @@ object VC {
 }
 
 object Parse {
-  
+
   def skipHeader(lines: Iterator[String]) = lines.dropWhile(_.startsWith("#"))
 
 }
