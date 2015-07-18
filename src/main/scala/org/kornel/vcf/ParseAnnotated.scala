@@ -19,7 +19,7 @@ object ParseAnnotated extends App {
 
 case class EFF(name: String, content: String)
 
-case class Format(eff: Stream[EFF])
+case class Format(eff: Seq[EFF])
 
 object Format {
 
@@ -30,14 +30,13 @@ object Format {
 
   private def extractEff(fields: Map[String, String]) = fields("EFF")
 
-  private def parseEffs(field: String): Stream[EFF] = {
-    val effs = Stream(field.split(","): _*)
+  private def parseEffs(field: String): Seq[EFF] = {
+    val effs = field.split(",")
     effs.map {
       effRaw =>
         val contentStart = effRaw.indexOf('(')
         val name = effRaw.substring(0, contentStart)
         val content = effRaw.substring(contentStart, effRaw.length - 1)
-        print(".")
         EFF(name, content)
     }
   }
@@ -73,8 +72,7 @@ object VC {
 }
 
 object Parse {
-
-
+  
   def skipHeader(lines: Iterator[String]) = lines.dropWhile(_.startsWith("#"))
 
 }
