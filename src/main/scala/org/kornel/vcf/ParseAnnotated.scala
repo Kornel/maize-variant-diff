@@ -11,19 +11,20 @@ object ParseAnnotated extends App {
   val file = scala.io.Source.fromFile(inputPath)
 
   val lines = skipHeader(file.getLines()).flatMap(line => VC(line.split("\t")))
-    .filter(_.chromosome == 10)
-    .flatMap(v => v.format().eff.map(e => v.position -> e))
-    .filter(_._2.name == "frameshift_variant")
-    .map(_._1)
-    .foreach(println)
+    //.filter(_.chromosome == 10)
+    .flatMap(v => v.info().eff.map(e => v -> e))
+    //.filter(_._2.name == "frameshift_variant")
+    .map(v => (v._1.hds1, v._1.hds2) -> 1).toSeq.groupBy(_._1).mapValues(_.foldLeft(0)((a,b) => a + b._2))
+
+  lines.foreach(println)
 
 }
 
 case class EFF(name: String, content: String)
 
-case class Format(eff: Seq[EFF])
+case class Info(eff: Seq[EFF])
 
-object Format {
+object Info {
 
   private def parseFields(fields: String) = fields.split(";").map {
     x => val split = x.split("=")
@@ -43,12 +44,22 @@ object Format {
     }
   }
 
-  def apply(raw: String): Format = {
-    Format(parseEffs(extractEff(parseFields(raw))))
+  def apply(raw: String): Info = {
+    Info(parseEffs(extractEff(parseFields(raw))))
   }
 }
 
-case class VC(chromosome: Int, position: Int, format: () => Format)
+sealed trait IsChange
+
+case object ChangeHDS1 extends IsChange
+
+case object ChangeHDS2 extends IsChange
+
+case object ChangeBoth extends IsChange
+
+case object NoChange extends IsChange
+
+case class VC(chromosome: Int, position: Int, info: () => Info, hds1: IsChange, hds2: IsChange)
 
 object VC {
 
@@ -58,17 +69,27 @@ object VC {
 
   def extractFormat(fields: Array[String]) = fields(7)
 
-//  def extractHds1(fields: Array[String]) = fields(8)
-//
-//  def extractHds2(fields: Array[String]) = fields(9)
+  def extractHds(rawHds: String) = rawHds.substring(0, 3) match {
+    case "0/0" => NoChange
+    case "1/0" => ChangeHDS1
+    case "0/1" => ChangeHDS2
+    case "1/1" => ChangeBoth
+    case x => throw new IllegalStateException(s"Unexpected hds $x")
+  }
+
+  def extractHds1(fields: Array[String]) = extractHds(fields(9))
+
+  def extractHds2(fields: Array[String]) = extractHds(fields(10))
 
   def apply(tokens: Array[String]): Option[VC] = {
     Try(extractChromosome(tokens).toInt).toOption.map {
       chromosome =>
         val position = extractPosition(tokens).toInt
-        lazy val _format = Format(extractFormat(tokens))
-        val format = () => _format
-        VC(chromosome, position, format)
+        lazy val _info = Info(extractFormat(tokens))
+        val info = () => _info
+        val hds1 = extractHds1(tokens)
+        val hds2 = extractHds2(tokens)
+        VC(chromosome, position, info, hds1, hds2)
     }
   }
 
