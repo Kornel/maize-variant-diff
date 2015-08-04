@@ -1,6 +1,6 @@
 package org.kornel.vcf
 
-import scala.util.Try
+import java.io.FileWriter
 
 object ParseAnnotated extends App {
 
@@ -10,94 +10,31 @@ object ParseAnnotated extends App {
 
   val file = scala.io.Source.fromFile(inputPath)
 
-  val lines = skipHeader(file.getLines()).flatMap(line => VC(line.split("\t")))
-    //.filter(_.chromosome == 10)
+  val lines = skipHeader(file.getLines())
+    .flatMap(VC.apply)
     .flatMap(v => v.info().eff.map(e => v -> e))
-    //.filter(_._2.name == "frameshift_variant")
-    .map(v => (v._1.hds1, v._1.hds2) -> 1).toSeq.groupBy(_._1).mapValues(_.foldLeft(0)((a,b) => a + b._2))
-
-  lines.foreach(println)
-
-}
-
-case class EFF(name: String, content: String)
-
-case class Info(eff: Seq[EFF])
-
-object Info {
-
-  private def parseFields(fields: String) = fields.split(";").map {
-    x => val split = x.split("=")
-      if (split.length > 1) split(0) -> split(1) else split(0) -> ""
-  }.toMap
-
-  private def extractEff(fields: Map[String, String]) = fields("EFF")
-
-  private def parseEffs(field: String): Seq[EFF] = {
-    val effs = field.split(",")
-    effs.map {
-      effRaw =>
-        val contentStart = effRaw.indexOf('(')
-        val name = effRaw.substring(0, contentStart)
-        val content = effRaw.substring(contentStart, effRaw.length - 1)
-        EFF(name, content)
-    }
+    .filter(_._2.name == "frameshift_variant")
+    .flatMap {
+    case (vc, eff) =>
+      if (vc.hds1.value - vc.hds2.value == 0) None else Some((vc.chromosome, vc.position, vc.hds1.value - vc.hds2.value))
   }
 
-  def apply(raw: String): Info = {
-    Info(parseEffs(extractEff(parseFields(raw))))
+  val all = lines.toList
+    .groupBy(x => (x._1, x._2))
+    .mapValues(_.map(_._3).sum)
+    .toList
+    .sortBy {
+    case ((chrom, pos), _) => (chrom, pos)
   }
-}
-
-sealed trait IsChange
-
-case object ChangeHDS1 extends IsChange
-
-case object ChangeHDS2 extends IsChange
-
-case object ChangeBoth extends IsChange
-
-case object NoChange extends IsChange
-
-case class VC(chromosome: Int, position: Int, info: () => Info, hds1: IsChange, hds2: IsChange)
-
-object VC {
-
-  def extractChromosome(fields: Array[String]) = fields(0)
-
-  def extractPosition(fields: Array[String]) = fields(1)
-
-  def extractFormat(fields: Array[String]) = fields(7)
-
-  def extractHds(rawHds: String) = rawHds.substring(0, 3) match {
-    case "0/0" => NoChange
-    case "1/0" => ChangeHDS1
-    case "0/1" => ChangeHDS2
-    case "1/1" => ChangeBoth
-    case x => throw new IllegalStateException(s"Unexpected hds $x")
+    .map {
+    case ((chrom, pos), value) => s"$chrom;$pos;$value\n"
   }
 
-  def extractHds1(fields: Array[String]) = extractHds(fields(9))
+  val fw = new FileWriter("frameshfit_variant-positions.csv", false)
 
-  def extractHds2(fields: Array[String]) = extractHds(fields(10))
+  all.foreach(fw.write)
 
-  def apply(tokens: Array[String]): Option[VC] = {
-    Try(extractChromosome(tokens).toInt).toOption.map {
-      chromosome =>
-        val position = extractPosition(tokens).toInt
-        lazy val _info = Info(extractFormat(tokens))
-        val info = () => _info
-        val hds1 = extractHds1(tokens)
-        val hds2 = extractHds2(tokens)
-        VC(chromosome, position, info, hds1, hds2)
-    }
-  }
-
-}
-
-object Parse {
-
-  def skipHeader(lines: Iterator[String]) = lines.dropWhile(_.startsWith("#"))
+  fw.close()
 
 }
 
