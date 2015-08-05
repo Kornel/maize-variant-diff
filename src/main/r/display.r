@@ -32,7 +32,7 @@ plot.positions <- function(filename) {
         ggtitle(title)
       
       dir.create(sprintf("plots/%s/", variant.type))
-      output.filename <- sprintf("plots/%s/plot%d.png", variant.type, i)
+      output.filename <- sprintf("plots/%s/plot%.2d.png", variant.type, i)
       
       ggsave(output.filename, p)
       
