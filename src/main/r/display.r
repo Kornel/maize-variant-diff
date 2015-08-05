@@ -20,6 +20,14 @@ plot.positions <- function(filename) {
     chrom.data[[i]] <- filter(data, Chrom == i)
     
     variant.type <- file_path_sans_ext(basename(filename))
+    
+    output.filename <- sprintf("plots/%s/plot%.2d.png", variant.type, i)
+    
+    if (file.exists(output.filename)) {
+      print(sprintf("File %s already exists, skipping...", output.filename))
+      next
+    }
+    
     title <- paste(variant.type, "\n", "Chromosome", i)
     
     tryCatch( {
@@ -32,8 +40,6 @@ plot.positions <- function(filename) {
         ggtitle(title)
       
       dir.create(sprintf("plots/%s/", variant.type))
-      output.filename <- sprintf("plots/%s/plot%.2d.png", variant.type, i)
-      
       ggsave(output.filename, p)
       
       plots[[i]] <- p
