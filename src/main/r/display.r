@@ -5,6 +5,8 @@ require(tools)
 
 plot.positions <- function(filename) {
   
+  print(sprintf("Working on %s", filename))
+  
   data <- read.csv(filename,
                    sep=",",
                    header=FALSE, 
@@ -20,26 +22,30 @@ plot.positions <- function(filename) {
     variant.type <- file_path_sans_ext(basename(filename))
     title <- paste(variant.type, "\n", "Chromosome", i)
     
-    p <- ggplot(chrom.data[[i]], aes(x=Pos, y=Value, color=Value)) + 
-      geom_point(shape=1) + 
-      geom_smooth(method="loess") +
-      ylab("hds1 - hds2") + 
-      xlab("Position") +
-      scale_x_continuous(breaks=number_ticks(7)) +
-      ggtitle(title)
-    
-    dir.create(variant.type)
-    output.filename <- sprintf("%s/plot%d.png", variant.type, i)
-    
-    ggsave(output.filename, p)
-    
-    plots[[i]] <- p
+    tryCatch( {
+      p <- ggplot(chrom.data[[i]], aes(x=Pos, y=Value, color=Value)) + 
+        geom_point(shape=1) + 
+        geom_smooth(method="loess") +
+        ylab("hds1 - hds2") + 
+        xlab("Position") +
+        scale_x_continuous(breaks=number_ticks(7)) +
+        ggtitle(title)
+      
+      dir.create(sprintf("plots/%s/", variant.type))
+      output.filename <- sprintf("plots/%s/plot%d.png", variant.type, i)
+      
+      ggsave(output.filename, p)
+      
+      plots[[i]] <- p
+    }, error = function(e) {
+      print(e$message)
+    })
   }
 
 }
 
-files <- list.files("/tmp/bx")
+files <- list.files("variants")
 
 for (f in files) {
-  plot.positions(sprintf("/tmp/bx/%s", f)) 
+  plot.positions(sprintf("variants/%s", f)) 
 }
