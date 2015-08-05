@@ -1,0 +1,16 @@
+{
+    "contents" : "require(dplyr)\nrequire(ggplot2)\nrequire(scales)\n\nplot.positions <- function(filename) {\n  \n  data <- read.csv(\"/tmp/ax/ax-frameshift_variant.csv\",\n                   sep=\",\",\n                   header=FALSE, \n                   col.names=c(\"Chrom\", \"Pos\", \"Value\"))\n  number_ticks <- function(n) {function(limits) pretty(limits, n)}\n  \n  plots <- NULL\n  chrom.data <- NULL\n  \n  for (i in 1:10) {\n    chrom.data[[i]] <- filter(data, Chrom == i)\n    \n    p <- ggplot(chrom.data[[i]], aes(x=Pos, y=Value, color=Value)) + \n      geom_point(shape=1) + \n      geom_smooth(method=\"loess\") +\n      scale_x_continuous(breaks=number_ticks(7)) +\n      ggtitle(paste(filename, \"\\nchromosome\", i))\n    \n    ggsave(sprintf(\"plot%d.png\", filename, i), p)\n    \n    plots[[i]] <- p\n  }\n\n}\n\nfiles <- list.files(\"/tmp/bx\")\n\nfor (f in files) {\n  plot.positions(sprintf(\"/tmp/bx/%s\", f)) \n}",
+    "created" : 1438759169724.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1389084986",
+    "id" : "6007B85",
+    "lastKnownWriteTime" : 1438807942,
+    "path" : "~/workspace/github/maize/parse-vcf/src/main/r/display.r",
+    "project_path" : "display.r",
+    "properties" : {
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}
