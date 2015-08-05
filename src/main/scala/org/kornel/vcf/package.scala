@@ -78,7 +78,7 @@ package object vcf {
 
     def extractHds2(fields: Array[String]) = extractHds(fields(10))
 
-    def apply(line: String) = apply(line.split("\t"))
+    def fromLine(line: String): Option[VC] = apply(line.split("\t"))
 
     def apply(tokens: Array[String]): Option[VC] = {
       Try(extractChromosome(tokens).toInt).toOption.map {

@@ -1,10 +1,11 @@
 require(dplyr)
 require(ggplot2)
 require(scales)
+require(tools)
 
 plot.positions <- function(filename) {
   
-  data <- read.csv("/tmp/ax/ax-frameshift_variant.csv",
+  data <- read.csv(filename,
                    sep=",",
                    header=FALSE, 
                    col.names=c("Chrom", "Pos", "Value"))
@@ -16,13 +17,21 @@ plot.positions <- function(filename) {
   for (i in 1:10) {
     chrom.data[[i]] <- filter(data, Chrom == i)
     
+    variant.type <- file_path_sans_ext(basename(filename))
+    title <- paste(variant.type, "\n", "Chromosome", i)
+    
     p <- ggplot(chrom.data[[i]], aes(x=Pos, y=Value, color=Value)) + 
       geom_point(shape=1) + 
       geom_smooth(method="loess") +
+      ylab("hds1 - hds2") + 
+      xlab("Position") +
       scale_x_continuous(breaks=number_ticks(7)) +
-      ggtitle(paste(filename, "\nchromosome", i))
+      ggtitle(title)
     
-    ggsave(sprintf("plot%d.png", filename, i), p)
+    dir.create(variant.type)
+    output.filename <- sprintf("%s/plot%d.png", variant.type, i)
+    
+    ggsave(output.filename, p)
     
     plots[[i]] <- p
   }
