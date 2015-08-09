@@ -3,7 +3,7 @@ require(ggplot2)
 require(scales)
 require(tools)
 
-plot.positions <- function(filename, overwrite=FALSE, doNotSave=FALSE) {
+PlotPositions <- function(filename, overwrite=FALSE, doNotSave=FALSE) {
   
   print(sprintf("Working on %s", filename))
   
@@ -64,7 +64,19 @@ plot.positions <- function(filename, overwrite=FALSE, doNotSave=FALSE) {
 files <- list.files("variants")
 
 for (f in files) {
-  plot.positions(sprintf("variants/%s", f), overwrite=TRUE) 
+  PlotPositions(sprintf("variants/%s", f), overwrite=TRUE) 
 }
 
-# plot.positions("variants/frameshift_variant.csv", doNotSave=TRUE)
+
+
+data <- read.csv('variants/frameshift_variant.csv',
+                 sep=",",
+                 header=FALSE, 
+                 col.names=c("Chrom", "Pos", "Value"))
+
+chrom1 <- filter(data, Chrom == 1)
+
+
+
+
+# PlotPositions("variants/frameshift_variant.csv", doNotSave=TRUE)

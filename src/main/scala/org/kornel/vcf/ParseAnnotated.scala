@@ -17,6 +17,7 @@ object ParseAnnotated extends App {
   val lines = skipHeader(file.getLines())
     .flatMap(VC.fromLine)
     .flatMap(v => v.info().eff.map(e => v -> e))
+    .filter(_._2.name == "frameshift_variant")
     .map {
     case (vc, eff) => (vc.chromosome, vc.position, eff.name, vc.hds1.value - vc.hds2.value)
   }

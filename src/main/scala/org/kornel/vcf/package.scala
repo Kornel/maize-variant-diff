@@ -28,7 +28,7 @@ package object vcf {
           val geneName = contentSplit(5)
           val transcriptId = contentSplit(8)
           EFF(name, content, geneName, transcriptId)
-      }
+      }.groupBy(_.name).mapValues(_.head).values.toSeq
     }
 
     def apply(raw: String): Info = {
