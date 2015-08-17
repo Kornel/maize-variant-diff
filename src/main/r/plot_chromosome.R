@@ -42,7 +42,6 @@ add_prob <- function(df) {
     dmvnorm(x, mean, sigma)
   }, df$expr.diff, df$snp.diff)
   
-  
   return(df)
 }
 
@@ -51,28 +50,22 @@ number_ticks <- function(n) {
 }
 
 plot_chromosome <- function(df, title) {
-  #n <- nrow(df)
-  #expr.density <- data.frame(expr = df$expr.diff, estimated=rnorm(n, mean(df$expr.diff), sd(df$expr.diff)))
-  #ggplot(melt(expr.density), aes(x=value, fill=variable)) + geom_density(alpha = .5)
-
-  #snp.density <- data.frame(expr = df$snp.diff, estimated=rnorm(n, mean(df$snp.diff), sd(df$snp.diff)))
-  #ggplot(melt(snp.density), aes(x=value, fill=variable)) + geom_density(alpha = .5)
   
   p <- ggplot(df, aes(x=expr.diff, y=snp.diff, color=prob)) + 
     geom_point(shape=1) + 
     geom_abline(slope = 0, intercept = 0, colour = 'red', alpha = 0.5)  + 
     geom_vline(xintercept = 0, colour = 'red', alpha = 0.5)  +
-    scale_x_continuous(name = "variants 1 - variants 2", limits = c(-3, 3), breaks = number_ticks(6)) +
-    scale_y_continuous(name = "expr 1 - expr 2", limits = c(-5, 5), breaks = number_ticks(10)) +
+    scale_x_continuous(name = "expr 1 - expr 2", limits = c(-5, 5), breaks = number_ticks(10)) +
+    scale_y_continuous(name = "variants 1 - variants 2", limits = c(-5, 5), breaks = number_ticks(10)) +
     ggtitle(title)
   
-  return (list(plot=p, summary=least_prob(df)))
+  return(list(plot=p, summary=least_prob(df)))
 }
 
 least_prob <- function(df) {
-  n <- 15
+  n <- 10
   top <- head(df[with(df, order(prob)), ], n)[, c('chromosome', 'gene.ID', 'expr.diff', 'snp.diff')]
   names(top) <- c('Chromosome', 'Gene name', 'expr 1 - expr 2', 'variants 1 - variants 2')
-  return()
+  return(top)
 }
 

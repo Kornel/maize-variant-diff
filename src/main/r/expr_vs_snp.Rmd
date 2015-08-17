@@ -12,6 +12,7 @@ print(res$plot)
 print.data.frame(res$summary, row.names = FALSE)
 ```
 
+
 ```{r fig.width=7, fig.height=6, echo=FALSE}
 
 for (i in 1:10) {
