@@ -1,14 +1,17 @@
 package org.kornel.vcf
 
 import java.io.FileWriter
+import scalikejdbc._
 
 object ParseAnnotated extends App {
 
   import Parse._
 
   val files = Types().map {
-    v => v -> new FileWriter(s"/tmp/ax-$v.csv", false)
+    v => v -> new FileWriter(s"/tmp/xx/$v.csv", false)
   }.toMap
+
+  files.foreach(_._2.write("chromosome,gene.ID,hds1,hds2\n"))
 
   val inputPath = "/Users/kornel.kielczewski/maize/AGPv3.fasta.mp.bcf.MUT.filt.annotated.vcf"
 
@@ -19,42 +22,50 @@ object ParseAnnotated extends App {
     .flatMap(v => v.info().eff.map(e => v -> e))
     .filter(_._2.name == "frameshift_variant")
     .map {
-    case (vc, eff) => (vc.chromosome, vc.position, eff.name, vc.hds1.value - vc.hds2.value)
+    case (vc, eff) => (vc.chromosome, vc.position, eff.name, vc.hds1.value, vc.hds2.value)
   }
 
-  var prev: Option[(Int, Int, String)] = None
-  var sum = 0
+  var prev: Option[(String, String)] = None
+  var sum1 = 0
+  var sum2 = 0
   var currLine = 0
 
   while (lines.hasNext) {
 
     currLine = currLine + 1
 
-    val (chrom, pos, name, value) = lines.next()
-    val curr = (chrom, pos, name)
+    val (chrom, pos, variantName, value1, value2) = lines.next()
+
+    val geneName = s"$chrom,${FindGeneName(chrom, pos)}"
+
+    val curr = (geneName, variantName)
 
     if (!lines.hasNext) {
       prev match {
         case Some(x) if x == curr =>
-          sum += value
-          files(name).write(s"$chrom,$pos,$sum\n")
-        case Some((c, p, n)) =>
-          files(n).write(s"$c,$p,$sum\n")
-          files(name).write(s"$chrom,$pos,$value\n")
+          sum1 += value1
+          sum2 += value2
+          files(variantName).write(s"$geneName,$sum1,$sum2\n")
+        case Some((g, n)) =>
+          files(n).write(s"$g,$sum1,$sum2\n")
+          files(variantName).write(s"$geneName,$value1,$value2\n")
       }
     } else {
       prev match {
         case Some(x) if x == curr =>
-          sum += value
+          sum1 += value1
+          sum2 += value2
         case Some(x) if x != curr =>
-          files(x._3).write(s"${x._1},${x._2},$sum\n")
-          sum = value
+          files(x._2).write(s"${x._1},$sum1,$sum2\n")
+          sum1 = value1
+          sum2 = value2
         case None =>
-          sum = value
+          sum1 = value1
+          sum2 = value2
       }
     }
 
-    prev = Some(chrom, pos, name)
+    prev = Some(geneName, variantName)
 
   }
 
@@ -103,5 +114,28 @@ object Types {
       "stop_retained_variant",
       "synonymous_variant",
       "upstream_gene_variant")
+}
+
+object FindGeneName {
+
+  Class.forName("com.mysql.jdbc.Driver")
+
+  ConnectionPool.singleton("jdbc:mysql://localhost/maize", "", "")
+
+  GlobalSettings.loggingSQLAndTime = LoggingSQLAndTimeSettings(enabled = false)
+
+  def apply(chrom: Int, pos: Int): String = DB readOnly { implicit session =>
+    val names = sql"select gene_c from indices_v3 where what = 'gene' and start <= $pos and stop >= $pos and chromosome = $chrom".map(_.string(1)).list().apply()
+    if (names.length != 1) {
+      println(s"Failed to fetch name for position $pos and chromosome $chrom - names = $names")
+      if (names.length == 0) {
+        "Unknown"
+      } else {
+        names.head
+      }
+    } else {
+      names.head
+    }
+  }
 
 }
